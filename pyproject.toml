@@ -1,6 +1,6 @@
 [project]
 name = "soda_kapybara"
-version = "2025.7.17.7"
+version = "2025.7.21.0"
 description = "卡皮巴拉浏览器库"
 readme = "README.md"
 requires-python = ">=3.12"

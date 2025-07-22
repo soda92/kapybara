@@ -4,162 +4,157 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.remote.webelement import WebElement
-from typing import Optional
+from typing import Optional, Union
 from pathlib import Path
 import logging
 
 
-class CustomBrowser(webdriver.Chrome):
-    def __init__(self, disable_image=False):
-        self.disable_image = disable_image
-
-        if not Path("配置文件/config.ini").exists():
-            logging.critical("配置文件/config.ini 不存在，请检查配置文件路径.")
-            exit(-1)
-        # 读取配置文件
-        config = configparser.ConfigParser()
-
-        config.read('配置文件/config.ini', encoding='utf-8')
-
-        # 获取配置文件的内容
-        google = config.get('config', 'Google')
-        browser_drivers = config.get('config', 'Browser_drivers')
-
-        if google == 'BIN':
-            if browser_drivers == 'no':
-                self.use_bin_and_driver()
-        elif google == 'google':
-            if browser_drivers == 'no':
-                super().__init__()
-                self.set_page_load_timeout(600)
-                self.implicitly_wait(10)
-            elif browser_drivers == 'yes':
-                driver_path = "chromedriver.exe"
-                service = Service(driver_path)
-                options = webdriver.ChromeOptions()
-                options.add_argument('-ignore-certificate-errors')
-                options.add_argument('-ignore-ssl-errors')
-                options.add_argument("--disable-blink-features=AutomationControlled")
-                options.add_experimental_option('excludeSwitches', ['enable-automation'])
-                if disable_image:
-                    options.add_argument("--blink-settings=imagesEnabled=false")
-                    prefs = {"profile.managed_default_content_settings.images": 2}
-                    options.add_experimental_option("prefs", prefs)
-
-                super().__init__(service=service, options=options)
-                self.set_page_load_timeout(600)
-                self.implicitly_wait(10)
-        elif google == 'hh':  # 火狐浏览器
-            if browser_drivers == 'yes':
-                # ua = UserAgent()
-                geckodriver_path = "geckodriver.exe"
-                service = Service(geckodriver_path)
-                options = webdriver.FirefoxOptions()
-                # 更换头部
-                # ua = ua.random
-                # options.set_preference('general.useragent.override', ua)
-                options.add_argument('-ignore-certificate-errors')
-                options.add_argument('-ignore-ssl-errors')
-                options.add_argument("--disable-blink-features=AutomationControlled")
-                options.set_preference("dom.webdriver.enabled", False)
-                options.set_preference('useAutomationExtension', False)
-                options.add_argument("--disable-infobars")
-                options.add_argument('disable-infobars')
-                options.set_preference("dom.webdriver.enabled", False)
-                options.set_preference("marionette.enabled", False)
+# --- 辅助函数 ---
 
 
-                super().__init__(service=service, options=options)
-                self.set_page_load_timeout(600)
-                self.implicitly_wait(10)
+def _find_bin_version() -> str:
+    """在 BIN 目录中查找浏览器版本。"""
+    # ... (代码从旧类中移到这里)
+    entries = Path('BIN').iterdir()
+    versions = [
+        entry.name for entry in entries if entry.is_dir() and entry.name.startswith('1')
+    ]
+    if not versions:
+        logging.critical('无法在BIN目录中找到浏览器.')
+        exit(-1)
 
-        from kapybara.shared_data import shared_data
-        shared_data.driver = self
+    versions.sort(reverse=True)
+    logging.info(f'找到的浏览器版本: {versions}')
+    return versions[0]
 
-    def stop(self):
-        self.quit()
 
-    def use_bin_and_driver(self):
-        version = self.find_bin_version()
-        driver_path = f"BIN/{version}/chromedriver.exe"
+# --- 工厂函数 ---
+
+
+def create_browser(disable_image=False) -> Union[webdriver.Chrome, webdriver.Firefox]:
+    """
+    一个工厂函数，用于根据配置文件创建和配置一个 WebDriver 实例。
+    """
+    config_path = Path('配置文件/config.ini')
+    if not config_path.exists():
+        logging.critical(f'{config_path} 不存在，请检查配置文件路径。')
+        exit(-1)
+
+    config = configparser.ConfigParser()
+    config.read(config_path, encoding='utf-8')
+
+    google = config.get('config', 'Google')
+    browser_drivers = config.get('config', 'Browser_drivers')
+
+    driver = None
+    options = None
+
+    # 根据配置设置选项
+    if google == 'BIN':
+        version = _find_bin_version()
+        driver_path = f'BIN/{version}/chromedriver.exe'
         browser_path = r'BIN/thorium.exe'
         service = Service(driver_path)
         options = webdriver.ChromeOptions()
         options.binary_location = browser_path
+        prefs = {
+            'credentials_enable_service': False,
+            'profile.password_manager_enabled': False,
+        }
+        if disable_image:
+            options.add_argument('--blink-settings=imagesEnabled=false')
+            prefs['profile.managed_default_content_settings.images'] = 2
+        options.add_experimental_option('prefs', prefs)
+        driver = webdriver.Chrome(service=service, options=options)
+
+    elif google == 'google' and browser_drivers == 'yes':
+        driver_path = 'chromedriver.exe'
+        service = Service(driver_path)
+        options = webdriver.ChromeOptions()
+        prefs = {}
+        if disable_image:
+            options.add_argument('--blink-settings=imagesEnabled=false')
+            prefs['profile.managed_default_content_settings.images'] = 2
+        if prefs:
+            options.add_experimental_option('prefs', prefs)
+        driver = webdriver.Chrome(service=service, options=options)
+
+    elif google == 'hh' and browser_drivers == 'yes':
+        geckodriver_path = 'geckodriver.exe'
+        service = Service(geckodriver_path)
+        options = webdriver.FirefoxOptions()
+        # ... (此处可以添加所有 Firefox 的特定选项)
+        driver = webdriver.Firefox(service=service, options=options)
+
+    else:
+        # 默认或不支持的情况
+        logging.info('使用默认的 Selenium WebDriver 初始化。')
+        driver = webdriver.Chrome()
+
+    # 通用设置
+    if options and isinstance(options, webdriver.ChromeOptions):
         options.add_argument('-ignore-certificate-errors')
         options.add_argument('-ignore-ssl-errors')
-        options.add_argument("--disable-blink-features=AutomationControlled")
+        options.add_argument('--disable-blink-features=AutomationControlled')
         options.add_experimental_option('excludeSwitches', ['enable-automation'])
 
-        # # 中文语言
-        # options.add_argument("--lang=zh-CN")
-        # # 用户目录
-        # from pathlib import Path
-        # temp_user_data_dir = Path("chrome_data")
-        # temp_user_data_dir.mkdir(exist_ok=True)
-        # options.add_argument(f"user-data-dir={temp_user_data_dir}")
+    driver.set_page_load_timeout(600)
+    driver.implicitly_wait(10)
 
-        if self.disable_image:
-            options.add_argument("--blink-settings=imagesEnabled=false")
-            # TODO KEY 冲突
-            # prefs = {"profile.managed_default_content_settings.images": 2}
-            # options.add_experimental_option("prefs", prefs)
+    from kapybara.shared_data import shared_data
 
-        # 方法一：禁用密码保存提示（推荐）
-        # 这会禁止浏览器弹出“保存密码”的提示
-        options.add_experimental_option("prefs", {
-            "credentials_enable_service": False,
-            "profile.password_manager_enabled": False
-        })
+    shared_data.driver = driver
 
-        # 调用父类（webdriver.Chrome）的构造器
-        super().__init__(service=service, options=options)
-        self.set_page_load_timeout(600)  # 页面加载超时
-        self.implicitly_wait(10)  # 元素未找到时的等待时间
+    return driver
 
-    def find_bin_version(self) -> str:
-        entries = Path("BIN").iterdir()
-        versions = [entry.name for entry in entries if entry.is_dir() and entry.name.startswith("1")]
-        if len(versions) == 0:
-            logging.critical("无法在BIN目录中找到浏览器.")
-            exit(-1)
 
-        versions.sort(reverse=True)
-        logging.info(f"找到的浏览器版本: {versions}")
-        return versions[0]
+# --- 向后兼容的类 ---
+
+
+class CustomBrowser:
+    """
+    一个包装类，用于向后兼容。
+    它在内部使用 create_browser 工厂，并将所有方法调用委托给真实的 driver 实例。
+    """
+
+    def __init__(self, disable_image=False):
+        # 使用工厂创建并持有 driver 实例
+        self._driver = create_browser(disable_image=disable_image)
 
     def find_element_cross_iframe(
-            self,
-            by: By,
-            value: str,
-            depth: int = 0,
-            max_depth: int = 5
+        self, by: By, value: str, depth: int = 0, max_depth: int = 5
     ) -> Optional[WebElement]:
+        """
+        在主文档和所有 iframe 中递归查找元素。
+        """
         try:
-            element = self.find_element(by, value)
-            return element
-        except NoSuchElementException as e:
+            return self._driver.find_element(by, value)
+        except NoSuchElementException:
             pass
 
         if depth >= max_depth:
             return None
 
-        iframes = self.find_elements(By.TAG_NAME, "iframe")
-
-        for index, iframe in enumerate(iframes):
-            self.switch_to.frame(iframe)
-
-            element = self.find_element_cross_iframe(
-                by,
-                value,
-                depth=depth + 1,
-                max_depth=max_depth
-            )
-
+        iframes = self._driver.find_elements(By.TAG_NAME, 'iframe')
+        for iframe in iframes:
+            self._driver.switch_to.frame(iframe)
+            element = self.find_element_cross_iframe(by, value, depth + 1, max_depth)
             if element:
+                # 找到元素后，保持在当前 iframe 上下文中并返回
                 return element
+            # 如果未找到，切回父级 frame 继续搜索下一个 iframe
+            self._driver.switch_to.parent_frame()
 
-            self.switch_to.parent_frame()
-
-        self.switch_to.default_content()
+        # 如果在所有 iframe 中都未找到，返回 None
         return None
+
+    def stop(self):
+        """停止并关闭浏览器。"""
+        return self._driver.quit()
+
+    def __getattr__(self, name):
+        """
+        将所有其他属性和方法的调用委托给内部的 driver 实例，
+        以确保 CustomBrowser 的行为与标准 WebDriver 完全相同。
+        """
+        return getattr(self._driver, name)

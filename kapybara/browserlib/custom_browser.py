@@ -36,15 +36,37 @@ def create_browser(disable_image=False) -> Union[webdriver.Chrome, webdriver.Fir
     一个工厂函数，用于根据配置文件创建和配置一个 WebDriver 实例。
     """
     config_path = Path('配置文件/config.ini')
-    if not config_path.exists():
-        logging.critical(f'{config_path} 不存在，请检查配置文件路径。')
-        exit(-1)
+    use_existing_browser = False
+    if not config_path.exists(): # 没有配置文件
+        if not Path('BIN').exists():
+            # 没有配置文件和浏览器时，使用默认浏览器
+            use_existing_browser = True
+        else:
+            # 有浏览器自动创建配置文件
+            config_path.parent.mkdir(exist_ok=True, parents=True)
+            config_path.write_text(
+                encoding='utf8',
+                data="""[config]
+Google=BIN
+Browser_drivers=no
+# 上面这个no是代表不使用驱动
+""",
+            )
+    else: # 有配置文件
+        if not Path('BIN').exists():
+            # 有配置文件，但是没有浏览器
+            logging.critical(f'浏览器不存在，请复制一个浏览器。')
+            exit(-1)
 
-    config = configparser.ConfigParser()
-    config.read(config_path, encoding='utf-8')
+    google = "google"
+    browser_drivers = "no"
 
-    google = config.get('config', 'Google')
-    browser_drivers = config.get('config', 'Browser_drivers')
+    if not use_existing_browser:
+        config = configparser.ConfigParser()
+        config.read(config_path, encoding='utf-8')
+
+        google = config.get('config', 'Google')
+        browser_drivers = config.get('config', 'Browser_drivers')
 
     driver = None
     options = None
@@ -78,6 +100,16 @@ def create_browser(disable_image=False) -> Union[webdriver.Chrome, webdriver.Fir
         if prefs:
             options.add_experimental_option('prefs', prefs)
         driver = webdriver.Chrome(service=service, options=options)
+
+    elif google == 'google' and browser_drivers == 'no':
+        options = webdriver.ChromeOptions()
+        prefs = {}
+        if disable_image:
+            options.add_argument('--blink-settings=imagesEnabled=false')
+            prefs['profile.managed_default_content_settings.images'] = 2
+        if prefs:
+            options.add_experimental_option('prefs', prefs)
+        driver = webdriver.Chrome(options=options)
 
     elif google == 'hh' and browser_drivers == 'yes':
         geckodriver_path = 'geckodriver.exe'

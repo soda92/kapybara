@@ -14,7 +14,7 @@ dependencies = [
     "pytest>=8.4.1",
     "requests>=2.32.4",
     "selenium>=4.34.2",
-    "yxmb-compatlib>=2025.7.30.4",
+    "yxmb-compatlib>=2025.7.30.5",
 ]
 
 

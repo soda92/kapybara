@@ -1007,7 +1007,7 @@ requires-dist = [
     { name = "pytest", specifier = ">=8.4.1" },
     { name = "requests", specifier = ">=2.32.4" },
     { name = "selenium", specifier = ">=4.34.2" },
-    { name = "yxmb-compatlib", specifier = ">=2025.7.30.4" },
+    { name = "yxmb-compatlib", specifier = ">=2025.7.30.5" },
 ]
 
 [package.metadata.requires-dev]
@@ -1155,7 +1155,7 @@ wheels = [
 
 [[package]]
 name = "yxmb-compatlib"
-version = "2025.7.30.4"
+version = "2025.7.30.5"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "ddddocr" },
@@ -1164,7 +1164,7 @@ dependencies = [
     { name = "pyinstaller" },
     { name = "selenium" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/98/e4/525abbd0ddcb615ebed22a2c2bf014cf822f9e0fe910e9096cdc496aa53f/yxmb_compatlib-2025.7.30.4.tar.gz", hash = "sha256:ba62b6be70ec68ba10a7b3d4d39ed5facbc5948fe31d76e16baec46ff0ef0e11", size = 16550, upload-time = "2025-07-30T07:14:45.641Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/5c/55/7630ed73955ae2b71faacf671ca78d01489600884ee5bece1c016ce35611/yxmb_compatlib-2025.7.30.5.tar.gz", hash = "sha256:a43627887573c2847c614dff4e2794d41cfb73dae7d5633a35a1cdfb5c8f15d4", size = 17679, upload-time = "2025-07-30T07:25:54.252Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/31/19/6785325330b541ab9a5745b2a23e969da7386b4d861d4dec26beab426cbd/yxmb_compatlib-2025.7.30.4-py3-none-any.whl", hash = "sha256:0ebad5c61b07f12ab2ef08c778fe8989b21a8d11fc90b6b58b002c8412d3aa92", size = 30379, upload-time = "2025-07-30T07:14:44.346Z" },
+    { url = "https://files.pythonhosted.org/packages/2f/2a/ed7151e58788be0e82d2bde3a88b0a9e73e14577d2db76fad14fae02ba89/yxmb_compatlib-2025.7.30.5-py3-none-any.whl", hash = "sha256:8261db22d631bade47ac8332ea8dd209e57a7be8976c408f25a4f5adf6e06ba0", size = 31485, upload-time = "2025-07-30T07:25:53.323Z" },
 ]

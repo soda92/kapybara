@@ -70,6 +70,7 @@ Browser_drivers=no
 
     driver = None
     options = None
+    service = None
 
     # 根据配置设置选项
     if google == 'BIN':
@@ -87,7 +88,6 @@ Browser_drivers=no
             options.add_argument('--blink-settings=imagesEnabled=false')
             prefs['profile.managed_default_content_settings.images'] = 2
         options.add_experimental_option('prefs', prefs)
-        driver = webdriver.Chrome(service=service, options=options)
 
     elif google == 'google' and browser_drivers == 'yes':
         driver_path = 'chromedriver.exe'
@@ -99,7 +99,6 @@ Browser_drivers=no
             prefs['profile.managed_default_content_settings.images'] = 2
         if prefs:
             options.add_experimental_option('prefs', prefs)
-        driver = webdriver.Chrome(service=service, options=options)
 
     elif google == 'google' and browser_drivers == 'no':
         options = webdriver.ChromeOptions()
@@ -109,19 +108,12 @@ Browser_drivers=no
             prefs['profile.managed_default_content_settings.images'] = 2
         if prefs:
             options.add_experimental_option('prefs', prefs)
-        driver = webdriver.Chrome(options=options)
 
     elif google == 'hh' and browser_drivers == 'yes':
         geckodriver_path = 'geckodriver.exe'
         service = Service(geckodriver_path)
         options = webdriver.FirefoxOptions()
         # ... (此处可以添加所有 Firefox 的特定选项)
-        driver = webdriver.Firefox(service=service, options=options)
-
-    else:
-        # 默认或不支持的情况
-        logging.info('使用默认的 Selenium WebDriver 初始化。')
-        driver = webdriver.Chrome()
 
     # 通用设置
     if options and isinstance(options, webdriver.ChromeOptions):
@@ -129,6 +121,20 @@ Browser_drivers=no
         options.add_argument('-ignore-ssl-errors')
         options.add_argument('--disable-blink-features=AutomationControlled')
         options.add_experimental_option('excludeSwitches', ['enable-automation'])
+
+    # --- 实例化 Driver ---
+    if google == 'BIN':
+        driver = webdriver.Chrome(service=service, options=options)
+    elif google == 'google' and browser_drivers == 'yes':
+        driver = webdriver.Chrome(service=service, options=options)
+    elif google == 'google' and browser_drivers == 'no':
+        driver = webdriver.Chrome(options=options)
+    elif google == 'hh' and browser_drivers == 'yes':
+        driver = webdriver.Firefox(service=service, options=options)
+    else:
+        # 默认或不支持的情况
+        logging.info('使用默认的 Selenium WebDriver 初始化。')
+        driver = webdriver.Chrome()
 
     driver.set_page_load_timeout(600)
     driver.implicitly_wait(10)
